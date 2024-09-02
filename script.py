@@ -26,10 +26,17 @@ def process_logs(logs):
     for record in logs:
         user_identity = record.get('userIdentity', {})
         user = user_identity.get('arn', user_identity.get('userName', 'unknown')).split('/')[-1]
+        
+        # Safely handle cases where requestParameters might be None or missing
+        request_parameters = record.get('requestParameters')
+        resource = 'unknown'
+        if request_parameters:
+            resource = request_parameters.get('instanceId', request_parameters.get('bucketName', 'unknown'))
+        
         action = {
             'user': user,  # Extract user or default to 'unknown'
             'action': record.get('eventName', 'unknown'),
-            'resource': record.get('requestParameters', {}).get('instanceId', 'unknown'),  # Example for EC2
+            'resource': resource,  # Handle missing resource identifiers
             'time': datetime.strptime(record['eventTime'], '%Y-%m-%dT%H:%M:%SZ')  # Convert eventTime to datetime object
         }
         actions.append(action)
@@ -56,7 +63,7 @@ def visualize_actions_timeline(actions):
     plt.show()
 
 # Main execution
-directory = '.'  # Assuming the current directory
+directory = 'ct_files/'  # Assuming the current directory
 logs = load_cloudtrail_logs_from_directory(directory)
 actions = process_logs(logs)
 visualize_actions_timeline(actions)
